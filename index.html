@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Conto Daniel - Dashboard</title>
+  
+  <!-- PWA & Mobile Meta -->
+  <meta name="theme-color" content="#0B0F19">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Conto">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <!-- TailwindCSS & Chart.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              dark: '#0B0F19',
+              card: '#131B2E',
+              cardborder: '#1E293B',
+              accent: '#38BDF8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0B0F19;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, button {
+      user-select: auto;
+    }
+    .glass {
+      background: rgba(19, 27, 46, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom, 1rem);
+    }
+    .safe-top {
+      padding-top: env(safe-area-inset-top, 0.75rem);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .animate-shake {
+      animation: shake 0.4s ease-in-out;
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- ============================================================ -->
+  <!-- 1. SCHERMATA BLOCCO (PIN)                                    -->
+  <!-- ============================================================ -->
+  <div id="lockScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-brand-dark safe-top safe-bottom">
+    <div class="w-full max-w-sm flex flex-col items-center text-center">
+      
+      <!-- Icona App -->
+      <div class="relative mb-6">
+        <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-xl shadow-indigo-500/20 ring-1 ring-white/20">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <span class="absolute -top-1 -right-1 flex h-4 w-4">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+        </span>
+      </div>
+
+      <h1 class="text-2xl font-bold tracking-tight text-white mb-1">Conto Daniel</h1>
+      <p class="text-xs text-slate-400 mb-8">Inserisci il PIN per decifrare i dati finanziari</p>
+
+      <!-- Form PIN -->
+      <div id="pinBox" class="w-full space-y-4">
+        <div class="relative">
+          <input 
+            type="password" 
+            id="pinInput" 
+            inputmode="numeric" 
+            pattern="[0-9]*" 
+            maxlength="16"
+            placeholder="••••••••" 
+            autocomplete="current-password"
+            class="w-full text-center text-2xl tracking-[0.4em] font-mono py-3.5 px-4 bg-slate-900/80 border border-slate-700/70 rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner"
+          >
+          <button type="button" id="togglePinVis" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1">
+            <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between text-xs px-1 text-slate-400">
+          <label class="flex items-center space-x-2 cursor-pointer select-none">
+            <input type="checkbox" id="rememberMe" checked class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900">
+            <span>Ricorda questo telefono</span>
+          </label>
+          <span class="text-slate-500">AES-256-GCM</span>
+        </div>
+
+        <div id="errorMsg" class="hidden text-xs text-rose-400 font-medium bg-rose-500/10 border border-rose-500/20 py-2 px-3 rounded-xl">
+          PIN non corretto. Riprova.
+        </div>
+
+        <button 
+          id="unlockBtn" 
+          type="button" 
+          class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:scale-[0.98] text-white font-semibold rounded-2xl shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center space-x-2"
+        >
+          <span id="btnText">Sblocca Dashboard</span>
+          <svg id="btnSpinner" class="hidden animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Info Sicurezza -->
+      <div class="mt-8 text-center text-[11px] text-slate-500 flex items-center justify-center space-x-1.5">
+        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <span>Crittografia end-to-end decifrata solo nel tuo browser</span>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- 2. DASHBOARD SBLOCCATA                                       -->
+  <!-- ============================================================ -->
+  <div id="mainDashboard" class="hidden flex-1 flex flex-col w-full max-w-5xl mx-auto px-4 sm:px-6 safe-top safe-bottom pb-12">
+    
+    <!-- Header Superiore -->
+    <header class="flex items-center justify-between py-4 border-b border-white/5 mb-6">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-md ring-1 ring-white/20">
+          <span class="text-sm font-black text-white tracking-wider">H</span>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base font-bold text-white">HYPE Conto</h1>
+            <span class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Live</span>
+          </div>
+          <p id="lastUpdateLabel" class="text-[11px] text-slate-400">Aggiornato di recente</p>
+        </div>
+      </div>
+
+      <!-- Azioni Header -->
+      <div class="flex items-center space-x-1.5">
+        <button id="togglePrivacyBtn" title="Nascondi importi" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>
+          </svg>
+        </button>
+        <button id="refreshBtn" title="Ricarica dati" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+        <button id="lockBtn" title="Blocca" class="p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/20 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Card Saldo Attuale (Hero) -->
+    <div class="relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 border border-indigo-500/20 shadow-2xl mb-6">
+      <div class="absolute -top-16 -right-16 w-56 h-56 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-16 -left-16 w-56 h-56 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <span class="text-xs font-semibold tracking-wider uppercase text-indigo-300/80">Disponibilità Conto</span>
+          <div class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mt-1 font-mono">
+            <span id="heroBalance">€ --,--</span>
+          </div>
+          <p id="heroSubtext" class="text-xs text-slate-400 mt-2 flex items-center space-x-1">
+            <span>Ultimo movimento registrato:</span>
+            <span id="lastTxDate" class="font-medium text-slate-200">--</span>
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-2 self-start sm:self-auto">
+          <span class="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-white/10 text-slate-200 border border-white/10">
+            HYPE Open Banking
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Griglia KPI: Entrate, Uscite, Risparmio -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
+      <!-- Entrate -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Entrate del Mese</p>
+          <p id="kpiIncome" class="text-xl sm:text-2xl font-bold font-mono text-emerald-400 mt-1">+€ --,--</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Uscite -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Spese del Mese</p>
+          <p id="kpiExpense" class="text-xl sm:text-2xl font-bold font-mono text-rose-400 mt-1">-€ --,--</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Risparmio Netto -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Risparmio Netto</p>
+          <p id="kpiSavings" class="text-xl sm:text-2xl font-bold font-mono text-indigo-300 mt-1">€ --,--</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtri Rapidi Periodo -->
+    <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-3 mb-6">
+      <button data-period="current" class="period-btn px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-indigo-600 text-white shadow-md shadow-indigo-600/20 transition">Questo Mese</button>
+      <button data-period="prev" class="period-btn px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-400 hover:text-white transition">Mese Scorso</button>
+      <button data-period="3m" class="period-btn px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-400 hover:text-white transition">Ultimi 3 Mesi</button>
+      <button data-period="year" class="period-btn px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-400 hover:text-white transition">2026</button>
+      <button data-period="all" class="period-btn px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-400 hover:text-white transition">Tutto lo Storico</button>
+    </div>
+
+    <!-- Grafici: Saldo & Categorie -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      
+      <!-- Grafico Andamento Saldo -->
+      <div class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-sm font-bold text-white">Andamento Saldo</h2>
+            <p class="text-[11px] text-slate-400">Evoluzione del conto nel tempo</p>
+          </div>
+          <span class="text-xs text-indigo-400 font-mono font-medium">Timeline</span>
+        </div>
+        <div class="relative w-full h-56 sm:h-64">
+          <canvas id="balanceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Grafico Ripartizione Spese -->
+      <div class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-sm font-bold text-white">Spese per Categoria</h2>
+            <p class="text-[11px] text-slate-400" id="categoryChartSubtitle">Distribuzione del periodo</p>
+          </div>
+          <span id="categoryTotalBadge" class="text-xs text-rose-400 font-mono font-medium">-€ 0,00</span>
+        </div>
+        <div class="relative w-full h-56 sm:h-64 flex items-center justify-center">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Feed Transazioni -->
+    <div class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+        <div>
+          <h2 class="text-base font-bold text-white">Movimenti & Spese</h2>
+          <p id="txCountBadge" class="text-xs text-slate-400">-- transazioni trovate</p>
+        </div>
+
+        <!-- Filtri e Ricerca -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <!-- Ricerca -->
+          <div class="relative">
+            <input 
+              type="text" 
+              id="txSearchInput" 
+              placeholder="Cerca negozio o spesa..."
+              class="w-full sm:w-56 text-xs py-2.5 pl-8 pr-3 bg-slate-900/90 border border-slate-700/60 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+
+          <!-- Dropdown Categoria -->
+          <select id="txCategoryFilter" class="text-xs py-2.5 px-3 bg-slate-900/90 border border-slate-700/60 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <option value="all">Tutte le Categorie</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Lista Movimenti -->
+      <div id="txList" class="space-y-2.5">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Paginazione / Mostra Altri -->
+      <div id="txLoadMoreBox" class="mt-5 text-center hidden">
+        <button id="txLoadMoreBtn" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 hover:text-white transition">
+          Carica altri movimenti
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- 3. SCRIPT LOGICA APPLICATIVA (Decifratura Web Crypto & UI)    -->
+  <!-- ============================================================ -->
+  <script>
+    // Configurazione & Stato Globale
+    let decryptedData = null;
+    let balanceChart = null;
+    let categoryChart = null;
+    let activePeriod = 'current';
+    let privacyHidden = false;
+    let txDisplayLimit = 30;
+
+    // Mapping icone categorie (SVG)
+    const categoryIcons = {
+      'supermercato': `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
+      'ristoranti e bar': `<svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18z"/></svg>`,
+      'trasporti e carburante': `<svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 19H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2zM6 14h.01M18 14h.01M8 10h8"/></svg>`,
+      'stipendio': `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+      'bonifici': `<svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`,
+      'tempo libero': `<svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+      'bollette': `<svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`,
+      'regali': `<svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V4a2 2 0 112 2h-2zm0 0V4a2 2 0 10-2 2h2zm8 4v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8m16 0H4"/></svg>`,
+      'viaggi': `<svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>`,
+      'abbigliamento': `<svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`,
+      'salute': `<svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`,
+      'prelievi': `<svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
+      'Altro': `<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>`
+    };
+
+    // Helper conversioni hex/buffer
+    function hexToBuf(hex) {
+      return new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    }
+
+    // Formattazione valuta
+    function formatCurrency(val, hideSign = false) {
+      if (privacyHidden) return '••••••';
+      const num = parseFloat(val);
+      if (isNaN(num)) return '€ 0,00';
+      const formatted = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(Math.abs(num));
+      if (hideSign) return formatted;
+      if (num > 0) return `+${formatted}`;
+      if (num < 0) return `-${formatted}`;
+      return formatted;
+    }
+
+    // Formattazione data italiana
+    function formatDate(dateStr) {
+      if (!dateStr) return '--';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const today = new Date();
+      if (d.toDateString() === today.toDateString()) return 'Oggi';
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (d.toDateString() === yesterday.toDateString()) return 'Ieri';
+      return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    }
+
+    // Funzione di decifratura Web Crypto API (AES-256-GCM + PBKDF2)
+    async function decifraPayload(payload, pin) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw', 
+        enc.encode(pin), 
+        { name: 'PBKDF2' }, 
+        false, 
+        ['deriveKey']
+      );
+      const key = await crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: hexToBuf(payload.salt),
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt']
+      );
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: hexToBuf(payload.iv) },
+        key,
+        hexToBuf(payload.data)
+      );
+      const dec = new TextDecoder();
+      return JSON.parse(dec.decode(decrypted));
+    }
+
+    // Caricamento payload cifrato dal server o file statico
+    async function caricaDati(pin) {
+      const res = await fetch(`data.json.enc?_t=${Date.now()}`);
+      if (!res.ok) {
+        throw new Error('Impossibile caricare il file dei dati.');
+      }
+      const payload = await res.json();
+      return await decifraPayload(payload, pin);
+    }
+
+    // Tentativo di sblocco
+    async function tentaSblocco(pin, remember) {
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const errorMsg = document.getElementById('errorMsg');
+      const pinBox = document.getElementById('pinBox');
+
+      btnText.textContent = 'Decifratura in corso...';
+      btnSpinner.classList.remove('hidden');
+      errorMsg.classList.add('hidden');
+
+      try {
+        decryptedData = await caricaDati(pin);
+        
+        if (remember) {
+          localStorage.setItem('conto_saved_pin', pin);
+        } else {
+          localStorage.removeItem('conto_saved_pin');
+        }
+
+        // Transizione alla dashboard
+        document.getElementById('lockScreen').classList.add('hidden');
+        document.getElementById('mainDashboard').classList.remove('hidden');
+        
+        inizializzaDashboard();
+      } catch (err) {
+        console.error(err);
+        errorMsg.textContent = 'PIN non corretto o errore di decifratura.';
+        errorMsg.classList.remove('hidden');
+        pinBox.classList.add('animate-shake');
+        setTimeout(() => pinBox.classList.remove('animate-shake'), 400);
+        localStorage.removeItem('conto_saved_pin');
+      } finally {
+        btnText.textContent = 'Sblocca Dashboard';
+        btnSpinner.classList.add('hidden');
+      }
+    }
+
+    // Inizializzazione Dashboard
+    function inizializzaDashboard() {
+      if (!decryptedData) return;
+
+      const kpi = decryptedData.kpi;
+      document.getElementById('heroBalance').textContent = formatCurrency(kpi.saldo_attuale, true);
+      document.getElementById('lastTxDate').textContent = kpi.ultima_data;
+      document.getElementById('lastUpdateLabel').textContent = `Aggiornato il ${kpi.ultimo_aggiornamento}`;
+
+      // Popola categorie nel dropdown
+      const categories = Object.keys(decryptedData.categorie_totale || {});
+      const catSelect = document.getElementById('txCategoryFilter');
+      catSelect.innerHTML = '<option value="all">Tutte le Categorie</option>';
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+        catSelect.appendChild(opt);
+      });
+
+      renderKPIPeriodo();
+      renderGrafici();
+      renderTransazioni();
+    }
+
+    // Calcolo e visualizzazione KPI in base al periodo attivo
+    function renderKPIPeriodo() {
+      const txs = filtraTransazioniPerPeriodo(activePeriod);
+      let income = 0;
+      let expense = 0;
+
+      txs.forEach(t => {
+        if (t.importo > 0) income += t.importo;
+        else expense += Math.abs(t.importo);
+      });
+
+      const net = income - expense;
+
+      document.getElementById('kpiIncome').textContent = formatCurrency(income);
+      document.getElementById('kpiExpense').textContent = formatCurrency(-expense);
+      document.getElementById('kpiSavings').textContent = formatCurrency(net);
+      document.getElementById('categoryTotalBadge').textContent = formatCurrency(-expense);
+    }
+
+    // Filtro periodo
+    function filtraTransazioniPerPeriodo(period) {
+      const all = decryptedData.transazioni || [];
+      if (period === 'all') return all;
+
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+      const currentYearMonth = `${currentYear}-${currentMonth}`;
+
+      if (period === 'current') {
+        return all.filter(t => t.data.startsWith(currentYearMonth));
+      }
+
+      if (period === 'prev') {
+        const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const prevYM = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        return all.filter(t => t.data.startsWith(prevYM));
+      }
+
+      if (period === '3m') {
+        const limitDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+        const limitStr = limitDate.toISOString().slice(0, 10);
+        return all.filter(t => t.data >= limitStr);
+      }
+
+      if (period === 'year') {
+        return all.filter(t => t.data.startsWith(String(currentYear)));
+      }
+
+      return all;
+    }
+
+    // Rendering Grafici (Chart.js)
+    function renderGrafici() {
+      // 1. Grafico Timeline Saldo
+      const timeline = decryptedData.saldo_timeline || [];
+      const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+      
+      if (balanceChart) balanceChart.destroy();
+
+      const labels = timeline.map(t => formatDate(t.data));
+      const values = timeline.map(t => t.saldo);
+
+      const gradient = balanceCtx.createLinearGradient(0, 0, 0, 220);
+      gradient.addColorStop(0, 'rgba(99, 102, 241, 0.35)');
+      gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+      balanceChart = new Chart(balanceCtx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Saldo',
+            data: values,
+            borderColor: '#818cf8',
+            backgroundColor: gradient,
+            borderWidth: 2.2,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: '#6366f1',
+            pointHoverBorderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: false, mode: 'index' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#94a3b8',
+              bodyColor: '#ffffff',
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (c) => `Saldo: ${formatCurrency(c.parsed.y, true)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#64748b', maxTicksLimit: 6, font: { size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#64748b', font: { size: 10 }, callback: (v) => '€' + v }
+            }
+          }
+        }
+      });
+
+      // 2. Grafico Categorie Periodo
+      renderGraficoCategorie();
+    }
+
+    function renderGraficoCategorie() {
+      const txs = filtraTransazioniPerPeriodo(activePeriod);
+      const catTotals = {};
+      
+      txs.forEach(t => {
+        if (t.importo < 0) {
+          const cat = t.categoria || 'Altro';
+          catTotals[cat] = (catTotals[cat] || 0) + Math.abs(t.importo);
+        }
+      });
+
+      const catLabels = Object.keys(catTotals);
+      const catValues = Object.values(catTotals);
+
+      const catCtx = document.getElementById('categoryChart').getContext('2d');
+      if (categoryChart) categoryChart.destroy();
+
+      const palette = [
+        '#6366f1', '#ec4899', '#38bdf8', '#f59e0b', '#10b981', 
+        '#a855f7', '#f43f5e', '#14b8a6', '#8b5cf6', '#64748b'
+      ];
+
+      categoryChart = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+          labels: catLabels,
+          datasets: [{
+            data: catValues,
+            backgroundColor: palette.slice(0, catLabels.length),
+            borderWidth: 2,
+            borderColor: '#0B0F19'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 }, padding: 12 }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (c) => ` ${c.label}: ${formatCurrency(c.parsed, true)}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Render Lista Transazioni
+    function renderTransazioni() {
+      const periodTxs = filtraTransazioniPerPeriodo(activePeriod);
+      const query = document.getElementById('txSearchInput').value.toLowerCase().trim();
+      const catFilter = document.getElementById('txCategoryFilter').value;
+
+      const filtered = periodTxs.filter(t => {
+        const matchesQuery = !query || t.descrizione.toLowerCase().includes(query) || (t.categoria && t.categoria.toLowerCase().includes(query));
+        const matchesCat = catFilter === 'all' || t.categoria === catFilter;
+        return matchesQuery && matchesCat;
+      });
+
+      const listEl = document.getElementById('txList');
+      listEl.innerHTML = '';
+
+      document.getElementById('txCountBadge').textContent = `${filtered.length} transazioni trovate`;
+
+      const visible = filtered.slice(0, txDisplayLimit);
+
+      if (visible.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-12 text-center text-slate-500 text-xs">
+            Nessun movimento trovato per i filtri selezionati.
+          </div>
+        `;
+        document.getElementById('txLoadMoreBox').classList.add('hidden');
+        return;
+      }
+
+      visible.forEach(t => {
+        const isPos = t.importo > 0;
+        const iconHtml = categoryIcons[t.categoria] || categoryIcons['Altro'];
+
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/40 hover:bg-slate-900/80 border border-white/5 transition';
+        item.innerHTML = `
+          <div class="flex items-center space-x-3 min-w-0 pr-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-800/90 border border-slate-700/50 flex items-center justify-center flex-shrink-0">
+              ${iconHtml}
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-slate-100 truncate">${t.descrizione}</p>
+              <div class="flex items-center space-x-2 mt-0.5">
+                <span class="text-[11px] text-slate-400">${formatDate(t.data)}</span>
+                <span class="text-[10px] text-slate-500">•</span>
+                <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wide truncate max-w-[120px]">${t.categoria}</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <p class="text-sm font-bold font-mono ${isPos ? 'text-emerald-400' : 'text-slate-100'}">
+              ${formatCurrency(t.importo)}
+            </p>
+            <p class="text-[10px] font-mono text-slate-500 mt-0.5">
+              Saldo: ${formatCurrency(t.saldo, true)}
+            </p>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+
+      const loadMoreBox = document.getElementById('txLoadMoreBox');
+      if (filtered.length > txDisplayLimit) {
+        loadMoreBox.classList.remove('hidden');
+      } else {
+        loadMoreBox.classList.add('hidden');
+      }
+    }
+
+    // ============================================================
+    // Event Listeners & Avvio
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      // Toggle visibilità PIN
+      const toggleVisBtn = document.getElementById('togglePinVis');
+      const pinInput = document.getElementById('pinInput');
+      toggleVisBtn.addEventListener('click', () => {
+        pinInput.type = pinInput.type === 'password' ? 'text' : 'password';
+      });
+
+      // Submit PIN
+      document.getElementById('unlockBtn').addEventListener('click', () => {
+        const pin = pinInput.value.trim();
+        const remember = document.getElementById('rememberMe').checked;
+        if (pin) tentaSblocco(pin, remember);
+      });
+
+      pinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const pin = pinInput.value.trim();
+          const remember = document.getElementById('rememberMe').checked;
+          if (pin) tentaSblocco(pin, remember);
+        }
+      });
+
+      // Bottoni Periodo
+      document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.period-btn').forEach(b => {
+            b.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/20');
+            b.classList.add('bg-slate-800', 'text-slate-400');
+          });
+          btn.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/20');
+          btn.classList.remove('bg-slate-800', 'text-slate-400');
+
+          activePeriod = btn.dataset.period;
+          txDisplayLimit = 30;
+          renderKPIPeriodo();
+          renderGraficoCategorie();
+          renderTransazioni();
+        });
+      });
+
+      // Ricerca e filtro movimenti
+      document.getElementById('txSearchInput').addEventListener('input', () => {
+        txDisplayLimit = 30;
+        renderTransazioni();
+      });
+
+      document.getElementById('txCategoryFilter').addEventListener('change', () => {
+        txDisplayLimit = 30;
+        renderTransazioni();
+      });
+
+      // Carica altri
+      document.getElementById('txLoadMoreBtn').addEventListener('click', () => {
+        txDisplayLimit += 30;
+        renderTransazioni();
+      });
+
+      // Toggle Privacy
+      document.getElementById('togglePrivacyBtn').addEventListener('click', () => {
+        privacyHidden = !privacyHidden;
+        inizializzaDashboard();
+      });
+
+      // Ricarica dati
+      document.getElementById('refreshBtn').addEventListener('click', async () => {
+        const savedPin = localStorage.getItem('conto_saved_pin') || pinInput.value;
+        if (savedPin) {
+          try {
+            decryptedData = await caricaDati(savedPin);
+            inizializzaDashboard();
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      });
+
+      // Lock / Disconnetti
+      document.getElementById('lockBtn').addEventListener('click', () => {
+        localStorage.removeItem('conto_saved_pin');
+        decryptedData = null;
+        pinInput.value = '';
+        document.getElementById('mainDashboard').classList.add('hidden');
+        document.getElementById('lockScreen').classList.remove('hidden');
+      });
+
+      // Auto-unlock se presente PIN salvato
+      const savedPin = localStorage.getItem('conto_saved_pin');
+      if (savedPin) {
+        pinInput.value = savedPin;
+        tentaSblocco(savedPin, true);
+      } else {
+        setTimeout(() => pinInput.focus(), 300);
+      }
+
+      // Registrazione Service Worker per PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+      }
+    });
+  </script>
+</body>
+</html>
